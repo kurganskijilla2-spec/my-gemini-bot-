@@ -1,0 +1,35 @@
+import asyncio
+import os
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from google import genai
+
+# Достаем ключи из настроек сервера
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+ai_client = genai.Client(api_key=GEMINI_API_KEY)
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
+dp = Dispatcher()
+
+@dp.message(CommandStart())
+async def start_cmd(message: types.Message):
+    await message.answer("Привет! Я бот с искусственным интеллектом Gemini. Задай мне любой вопрос!")
+
+@dp.message()
+async def handle_message(message: types.Message):
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    try:
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=message.text,
+        )
+        await message.answer(response.text)
+    except Exception as e:
+        await message.answer(f"Произошла ошибка: {e}")
+
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
